@@ -14,7 +14,7 @@ namespace FundaAssigment.FundaAPIService
         private HttpClient _httpClient;
 
         private static readonly int _maxPageSize = 25;
-        private static readonly int _apiRequestDelay = (int)(100m / 60 * 1000);
+        private static readonly int _apiRequestDelay = (int)(60 / 100m * 1000);
         private static readonly string _apiKey = "ac1b0b1572524640a0ecc54de453ea9f";
         private static readonly string _apiUrl = "http://partnerapi.funda.nl/feeds/Aanbod.svc/json";
 
@@ -31,12 +31,20 @@ namespace FundaAssigment.FundaAPIService
             HousingFeature? housingFeatures = null)
         {
             var pageNumber = 0;
+            var completedIn = _apiRequestDelay;
+
             var offers = new List<Offer>();
             var agents = new Dictionary<int, int>();
+            var watch = System.Diagnostics.Stopwatch.StartNew();
 
             do
             {
-                await Task.Delay(_apiRequestDelay);
+                if (_apiRequestDelay - completedIn > 0)
+                {
+                    await Task.Delay(_apiRequestDelay - completedIn);
+                }
+
+                watch.Restart();
 
                 pageNumber++;
                 offers = await GetOffers(pageNumber, city, housingFeatures);
@@ -50,6 +58,9 @@ namespace FundaAssigment.FundaAPIService
 
                     agents[offer.AgentId]++;
                 }
+
+                watch.Stop();
+                completedIn = (int)watch.ElapsedMilliseconds;
             }
             while (offers.Count > 0);
 
